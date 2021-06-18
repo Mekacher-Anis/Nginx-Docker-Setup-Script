@@ -1,0 +1,5 @@
+FROM nginx:alpine
+
+RUN if [ ! -d /logs ]; then mkdir /logs; fi
+RUN if [ ! -d /tls ]; then mkdir /tls; fi
+RUN if [ ! -d /srv ]; then mkdir /srv; fi

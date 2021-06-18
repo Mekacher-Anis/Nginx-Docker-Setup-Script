@@ -1,0 +1,16 @@
+services:
+    nginx:
+        image: anismk/nginx-server
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ${NGINX_ROOT_FOLDER}/logs:/logs
+            - ${NGINX_ROOT_FOLDER}/srv:/srv
+            - ${NGINX_ROOT_FOLDER}/tls:/tls
+            - ${NGINX_ROOT_FOLDER}/config:/etc/nginx
+        restart: unless-stopped
+        networks:
+            - nginx-network
+networks:
+    nginx-network:
