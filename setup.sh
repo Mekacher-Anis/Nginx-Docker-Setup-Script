@@ -12,6 +12,10 @@ then
     exit
 fi
 # check required packages
+if ! command -v curl &> /dev/null;
+then
+    apt-get install curl -y
+fi
 if [[ $(dpkg -l | grep 'docker-ce') ]]
 then
     echo "docker already installed."
