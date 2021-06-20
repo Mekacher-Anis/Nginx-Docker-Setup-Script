@@ -38,3 +38,4 @@ cp /home/$USER/nginx-data/config/conf.d/default.conf /home/$USER/nginx-data/conf
 - [ ] add script (perhaps saved in /usr/bin) to easily add virual server or proxy servers.
 - [ ] add the functionality to easily update nginx to latest version.
 - [ ] add the functionality to disable/remove a server.
+- [ ] add basic support for php-fpm and/or apache for serving php files.
