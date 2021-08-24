@@ -1,6 +1,7 @@
 services:
     nginx:
         image: anismk/nginx-server
+        container_name: anismk-nginx-server
         ports:
             - "80:80"
             - "443:443"
