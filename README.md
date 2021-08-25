@@ -34,6 +34,7 @@ cp /home/$USER/nginx-data/config/conf.d/default.conf /home/$USER/nginx-data/conf
 
 # Todo
 - [x] make it easier to add new server quickly
+- [x] add a way to specify the host IP as proxied ip address 
 - [ ] add the functionality to signal nginx to reload the data.
 - [ ] add the functionality to start certbot and automatically request a let's encrypt certificate.
 - [ ] add script (perhaps saved in /usr/bin) to easily add virual server or proxy servers.
