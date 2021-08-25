@@ -32,10 +32,13 @@ cp /home/$USER/nginx-data/config/conf.d/default.conf /home/$USER/nginx-data/conf
 5. generates the required "docker-compose.yml" and starts up nginx.
 5. copies the "docker-compose.yml" file to the "nginx-data" directory for use later.
 
+# Commands
+- to reload the nginx configuration manually run the following comamnd `docker exec anismk-nginx-server nginx -s reload`
+
 # Todo
 - [x] make it easier to add new server quickly
 - [x] add a way to specify the host IP as proxied ip address 
-- [ ] add the functionality to signal nginx to reload the data.
+- [x] add the functionality to signal nginx to reload the data.
 - [ ] add the functionality to start certbot and automatically request a let's encrypt certificate.
 - [ ] add script (perhaps saved in /usr/bin) to easily add virual server or proxy servers.
 - [ ] add the functionality to easily update nginx to latest version.
