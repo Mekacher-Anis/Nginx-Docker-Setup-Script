@@ -17,7 +17,7 @@ check_packages() {
         rm get-docker.sh
     fi
     if [ ! -f /usr/local/bin/docker-compose ]; then
-        echo "installing docker-compose..."
+        echo "[LOG] installing docker-compose..."
         curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         chmod +x /usr/local/bin/docker-compose
     fi
@@ -42,13 +42,17 @@ check_dirs() {
 
 create_server_files() {
     if [ ! -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf ]; then
-        export SERVER_NAME
-        envsubst <server-template.conf >$SERVER_NAME.conf
+        # generate and copy server config file
+        envsubst < $TYPE-template.conf >$SERVER_NAME.conf
         mv $SERVER_NAME.conf $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf
         chown $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf
-        envsubst < index-template.html > index.html
-        mv index.html $NGINX_ROOT_FOLDER/srv/$SERVER_NAME/index.html
-        chown $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/srv/$SERVER_NAME/index.html
+        # generate and copy index file if required
+        if [ ! $TYPE = 'proxy' ]; then
+            envsubst < index-template.html > index.html
+            mv index.html $NGINX_ROOT_FOLDER/srv/$SERVER_NAME/index.html
+            chown $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/srv/$SERVER_NAME/index.html
+        fi
+        # create access.log and error.log
         touch $NGINX_ROOT_FOLDER/logs/$SERVER_NAME/access.log $NGINX_ROOT_FOLDER/logs/$SERVER_NAME/error.log
         chown -R $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/logs/$SERVER_NAME
     fi
@@ -96,17 +100,10 @@ log_infos() {
     echo "[INFO] the generated docker-compose file is located at $NGINX_ROOT_FOLDER/docker-compose.yml"
 }
 
-# generate folders necessary for the new server
-add_server() {
-    if [ -z $1 ]; then return; fi
-    echo "[LOG] Adding new server..."
-    create_server_files $1
-}
-
 parse_cmd_args() {
     # parse command line arguments
-    OPTIONS=u:p:d:
-    LONGOPTS=user:,path:,domain:
+    OPTIONS=u:p:d:t:s:
+    LONGOPTS=user:,path:,domain:,type:,proxiedServer:
 
     ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
@@ -118,6 +115,8 @@ parse_cmd_args() {
     USERNAME=''
     NGINX_ROOT_FOLDER=''
     SERVER_NAME=''
+    TYPE='server'
+    PROXIED_SERVER=''
     while true; do
         case "$1" in
         -u | --user)
@@ -130,6 +129,22 @@ parse_cmd_args() {
             ;;
         -d | --domain)
             SERVER_NAME=$2
+            shift 2
+            ;;
+        -t | --type)
+            case "$2" in
+                php-fpm | proxy | server)
+                    TYPE="$2"
+                    ;;
+                *)
+                    echo "[LOG] Undefined type value, defaulting to type 'server'"
+                    TYPE='server'
+                    ;;
+            esac
+            shift 2
+            ;;
+        -s | --proxiedServer)
+            PROXIED_SERVER=$2
             shift 2
             ;;
         --)
@@ -154,6 +169,11 @@ parse_cmd_args() {
         exit 1
     fi
 
+    if [[ $TYPE = 'proxy' && -z $PROXIED_SERVER ]]; then
+        echo "Type is proxy server but not proxied server is defined, please it using '-s | --proxiedServer' option"
+        exit 1
+    fi
+
     # if no path has been, set the default path to the use home directory
     if [ -z $NGINX_ROOT_FOLDER ]; then
         NGINX_ROOT_FOLDER=/home/$USERNAME/nginx-data
@@ -162,8 +182,10 @@ parse_cmd_args() {
     export NGINX_ROOT_FOLDER
     export SERVER_NAME
     export USERNAME
+    export TYPE
+    export PROXIED_SERVER
 
-    echo -e "[CONFIG]\nselected user\t: ${USERNAME}\nroot folder\t: ${NGINX_ROOT_FOLDER}\nnew server name\t: ${SERVER_NAME}\n"
+    # echo -e "[CONFIG]\nselected user\t: ${USERNAME}\nroot folder\t: ${NGINX_ROOT_FOLDER}\nnew server name\t: ${SERVER_NAME}\n"
 }
 
 ####################################################
@@ -181,7 +203,18 @@ parse_cmd_args $@
 # and the directory structure exists
 check_packages
 check_dirs
-add_server $SERVER_NAME
+
+# hmmmm pure functions, aren't my thing, that's why the code is a bit of a mess :D
+case $TYPE in
+server)
+    echo "[LOG] Adding new server..."
+    create_server_files
+    ;;
+proxy)
+    echo "[LOG] Adding proxy server..."
+    create_server_files
+    ;;
+esac
 
 if start_docker_compose; then
     log_infos
