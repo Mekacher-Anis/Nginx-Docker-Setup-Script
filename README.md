@@ -33,7 +33,7 @@ cp /home/$USER/nginx-data/config/conf.d/default.conf /home/$USER/nginx-data/conf
 5. copies the "docker-compose.yml" file to the "nginx-data" directory for use later.
 
 # Commands
-- to reload the nginx configuration manually run the following comamnd
+- to reload the nginx configuration manually run the following comamnd\
 `sudo docker exec anismk-nginx-server nginx -s reload`
 
 # Todo
