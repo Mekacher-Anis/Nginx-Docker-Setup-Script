@@ -40,6 +40,18 @@ check_dirs() {
     fi
 }
 
+# delete files for a defined server
+delete_dirs() {
+    if [ ! -d $NGINX_ROOT_FOLDER/logs/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/logs/$SERVER_NAME; fi
+    if [ ! -d $NGINX_ROOT_FOLDER/srv/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/srv/$SERVER_NAME; fi
+    if [ -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf ]; then 
+        rm $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf;
+    fi
+    if [ -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled ]; then 
+        rm $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled;
+    fi
+}
+
 create_server_files() {
     if [ ! -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf ]; then
         # generate and copy server config file
@@ -66,11 +78,6 @@ create_nginx_image() {
 
 # generate docker compose configuration and start server
 start_docker_compose() {
-    # if nc -z 127.0.0.1 80 || nc -z 127.0.0.1 443; then
-    #     echo "[ERROR] Ports 80,443 are already in use, please stop the services that are using the ports before running the script again."
-    #     #return 1
-    # fi
-
     # if nginx image doesn't exist then build it
     if [[ "$(docker images -q $IMG_NAME 2> /dev/null)" == "" ]]; then
         create_nginx_image
@@ -103,7 +110,7 @@ log_infos() {
 parse_cmd_args() {
     # parse command line arguments
     OPTIONS=u:p:d:t:s:
-    LONGOPTS=user:,path:,domain:,type:,proxiedServer:
+    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable
 
     ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
@@ -115,6 +122,7 @@ parse_cmd_args() {
     USERNAME=''
     NGINX_ROOT_FOLDER=''
     SERVER_NAME=''
+    ACTION='create'
     TYPE='server'
     PROXIED_SERVER=''
     while true; do
@@ -146,6 +154,18 @@ parse_cmd_args() {
         -s | --proxiedServer)
             PROXIED_SERVER=$2
             shift 2
+            ;;
+        --delete)
+            ACTION='delete'
+            shift
+            ;;
+        --enable)
+            ACTION='enable'
+            shift
+            ;;
+        --disable)
+            ACTION='disable'
+            shift
             ;;
         --)
             shift
@@ -184,6 +204,7 @@ parse_cmd_args() {
     export USERNAME
     export TYPE
     export PROXIED_SERVER
+    export ACTION
 
     # echo -e "[CONFIG]\nselected user\t: ${USERNAME}\nroot folder\t: ${NGINX_ROOT_FOLDER}\nnew server name\t: ${SERVER_NAME}\n"
 }
@@ -205,19 +226,61 @@ check_packages
 check_dirs
 
 # hmmmm pure functions, aren't my thing, that's why the code is a bit of a mess :D
-case $TYPE in
-server)
-    echo "[LOG] Adding new server..."
-    create_server_files
+case $ACTION in 
+create)
+    case $TYPE in
+    server)
+        echo "[LOG] Adding new server..."
+        create_server_files
+        ;;
+    proxy)
+        echo "[LOG] Adding proxy server..."
+        create_server_files
+        ;;
+    esac
+    if start_docker_compose; then
+        log_infos
+    else
+        echo "[ERROR] sorry, something went wrong, couldn't start nginx-server."
+    fi
     ;;
-proxy)
-    echo "[LOG] Adding proxy server..."
-    create_server_files
+
+
+enable)
+    # check if the configuration file exists and change the extension then reload the server
+    if [ -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled ]; then
+        echo "[LOG] Enabling block server $SERVER_NAME ..."
+        mv $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf
+        docker exec anismk-nginx-server nginx -s reload
+        if [ $? ]; then
+            echo "[LOG] $SERVER_NAME enabled successfully."
+        fi
+    else
+        echo "[ERROR] Can't find the configuration file '$NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled'"
+        exit 1
+    fi
+    ;;
+disable)
+    # change the extension of the config file and then reload the nginx server to disable it
+    if [ -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf ]; then
+        echo "[LOG] Disabling block server $SERVER_NAME ..."
+        mv $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled
+        docker exec anismk-nginx-server nginx -s reload
+        if [ $? ]; then
+            echo "[LOG] $SERVER_NAME disabled successfully."
+        fi
+    else
+        echo "[ERROR] Can't find the configuration file '$NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf'"
+        exit 1
+    fi
+    ;;
+delete)
+    printf "[LOG] You are going to delete %s configuration and all it's files, are you sure [y/n]:" $SERVER_NAME
+    read -n 1 ans
+    if [ $ans = 'y' ]; then
+        printf "\n[LOG] Deleting %s ...\n" $SERVER_NAME
+        delete_dirs
+        docker exec anismk-nginx-server nginx -s reload
+    fi
     ;;
 esac
-
-if start_docker_compose; then
-    log_infos
-else
-    echo "[ERROR] sorry, something went wrong, couldn't start nginx-server."
-fi
