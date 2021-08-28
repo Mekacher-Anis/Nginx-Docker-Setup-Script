@@ -45,3 +45,4 @@ cp /home/$USER/nginx-data/config/conf.d/default.conf /home/$USER/nginx-data/conf
 - [ ] add the functionality to easily update nginx to latest version.
 - [x] add the functionality to disable/remove a server.
 - [ ] add basic support for php-fpm and/or apache for serving php files.
+- [ ] add a simple way to list all available servers and if they're active or not

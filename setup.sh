@@ -42,8 +42,8 @@ check_dirs() {
 
 # delete files for a defined server
 delete_dirs() {
-    if [ ! -d $NGINX_ROOT_FOLDER/logs/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/logs/$SERVER_NAME; fi
-    if [ ! -d $NGINX_ROOT_FOLDER/srv/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/srv/$SERVER_NAME; fi
+    if [ -d $NGINX_ROOT_FOLDER/logs/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/logs/$SERVER_NAME; fi
+    if [ -d $NGINX_ROOT_FOLDER/srv/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/srv/$SERVER_NAME; fi
     if [ -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf ]; then 
         rm $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf;
     fi
