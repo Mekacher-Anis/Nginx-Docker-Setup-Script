@@ -9,12 +9,23 @@ services:
             - ${NGINX_ROOT_FOLDER}/logs:/logs
             - ${NGINX_ROOT_FOLDER}/srv:/srv
             - ${NGINX_ROOT_FOLDER}/tls:/tls
-            - ${NGINX_ROOT_FOLDER}/config:/etc/nginx
+            - ${NGINX_ROOT_FOLDER}/config/nginx:/etc/nginx
         restart: unless-stopped
+        depends_on:
+            - php
         networks:
             - nginx-network
         extra_hosts:
-            - "docker.host.ip:host-gateway"
+            - "docker.host.ip:172.17.0.1"
+    php:
+        image: anismk/php-fpm
+        volumes:
+            - ${NGINX_ROOT_FOLDER}/srv:/var/www/html
+            - ${NGINX_ROOT_FOLDER}/config/php:/php-fpm
+        networks:
+            - nginx-network
+        restart: unless-stopped
+
 networks:
     nginx-network:
         driver: bridge

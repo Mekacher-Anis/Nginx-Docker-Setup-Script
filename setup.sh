@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-IMG_NAME='anismk/nginx-server'
+NGINX_IMG_NAME='anismk/nginx-server'
 
 # check required packages
 check_packages() {
@@ -27,16 +27,18 @@ check_packages() {
 check_dirs() {
     echo "[LOG] checking/creating necessary directories..."
     if [ ! -d $NGINX_ROOT_FOLDER/logs/$SERVER_NAME ]; then mkdir -p $NGINX_ROOT_FOLDER/logs/$SERVER_NAME; fi
-    if [ ! -d $NGINX_ROOT_FOLDER/config/conf.d ]; then mkdir -p $NGINX_ROOT_FOLDER/config/conf.d; fi
+    if [ ! -d $NGINX_ROOT_FOLDER/config/nginx/conf.d ]; then mkdir -p $NGINX_ROOT_FOLDER/config/nginx/conf.d; fi
+    if [ ! -d $NGINX_ROOT_FOLDER/config/php/confg.d ]; then mkdir -p $NGINX_ROOT_FOLDER/config/php/conf.d; fi
     if [ ! -d $NGINX_ROOT_FOLDER/srv/$SERVER_NAME ]; then mkdir -p $NGINX_ROOT_FOLDER/srv/$SERVER_NAME; fi
     if [ ! -d $NGINX_ROOT_FOLDER/tls ]; then mkdir -p $NGINX_ROOT_FOLDER/tls; fi
     chown -R $USERNAME:$USERNAME $NGINX_ROOT_FOLDER
 
     # move default configuration files
-    if [ ! -f $NGINX_ROOT_FOLDER/config/nginx.conf ]; then
-        cp nginx.conf $NGINX_ROOT_FOLDER/config/nginx.conf
-        cp mime.types $NGINX_ROOT_FOLDER/config/mime.types
+    if [ ! -f $NGINX_ROOT_FOLDER/config/nginx/nginx.conf ]; then
+        cp nginx.conf $NGINX_ROOT_FOLDER/config/nginx/nginx.conf
+        cp mime.types $NGINX_ROOT_FOLDER/config/nginx/mime.types
         chown -R $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/config
+        # php-fpm default configuration file is already available on the image
     fi
 }
 
@@ -44,44 +46,58 @@ check_dirs() {
 delete_dirs() {
     if [ -d $NGINX_ROOT_FOLDER/logs/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/logs/$SERVER_NAME; fi
     if [ -d $NGINX_ROOT_FOLDER/srv/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/srv/$SERVER_NAME; fi
-    if [ -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf ]; then 
-        rm $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf;
+    if [ -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf ]; then 
+        rm $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf;
     fi
-    if [ -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled ]; then 
-        rm $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled;
+    if [ -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled ]; then 
+        rm $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled;
+    fi
+    if [ -f $NGINX_ROOT_FOLDER/config/php/conf.d/$SERVER_NAME.ini ]; then 
+        rm $NGINX_ROOT_FOLDER/config/php/conf.d/$SERVER_NAME.ini;
     fi
 }
 
 create_server_files() {
-    if [ ! -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf ]; then
+    if [ ! -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf ]; then
         # generate and copy server config file
         envsubst < $TYPE-template.conf >$SERVER_NAME.conf
-        mv $SERVER_NAME.conf $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf
-        chown $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf
+        mv $SERVER_NAME.conf $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf
+        chown $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf
         # generate and copy index file if required
-        if [ ! $TYPE = 'proxy' ]; then
+        if [ ! $TYPE == 'proxy' ]; then
             envsubst < index-template.html > index.html
             mv index.html $NGINX_ROOT_FOLDER/srv/$SERVER_NAME/index.html
             chown $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/srv/$SERVER_NAME/index.html
         fi
-        # create access.log and error.log
-        touch $NGINX_ROOT_FOLDER/logs/$SERVER_NAME/access.log $NGINX_ROOT_FOLDER/logs/$SERVER_NAME/error.log
+        # copy php info file if this is php server
+        if [ $TYPE == 'php' ]; then
+            echo "<?php echo phpinfo();?>" > $NGINX_ROOT_FOLDER/srv/$SERVER_NAME/info.php
+            chown $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/srv/$SERVER_NAME/info.php
+        fi
+        # create access.log and error.log and php-fpm.ini
+        touch $NGINX_ROOT_FOLDER/logs/$SERVER_NAME/access.log \
+            $NGINX_ROOT_FOLDER/logs/$SERVER_NAME/error.log \
+            $NGINX_ROOT_FOLDER/config/php/conf.d/$SERVER_NAME.ini
         chown -R $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/logs/$SERVER_NAME
     fi
 }
 
 # create the required nginx image
-create_nginx_image() {
-    echo "[LOG] building nginx image..."
-    docker build -f nginx-dockerfile -t $IMG_NAME . 1>/dev/null
+create_images() {
+    if [[ "$(docker images -q $NGINX_IMG_NAME 2> /dev/null)" == "" ]]; then
+        echo "[LOG] building nginx image..."
+        docker build -f nginx-dockerfile -t $NGINX_IMG_NAME . 1>/dev/null
+    fi
+    if [[ "$(docker images -q anismk/php-fpm 2> /dev/null)" == "" ]]; then
+        echo "[LOG] building php image..."
+        docker build -f php-dockerfile -t anismk/php-fpm . 1>/dev/null
+    fi
 }
 
 # generate docker compose configuration and start server
 start_docker_compose() {
     # if nginx image doesn't exist then build it
-    if [[ "$(docker images -q $IMG_NAME 2> /dev/null)" == "" ]]; then
-        create_nginx_image
-    fi
+    create_images
 
     # if the image is already running, then simply reload the configuration
     if [[ $(docker ps | grep anismk-nginx-server) ]]; then
@@ -103,7 +119,7 @@ start_docker_compose() {
 log_infos() {
     echo "[INFO] server started successfully !"
     echo "[INFO] nginx data folder is located at $NGINX_ROOT_FOLDER please add new websites there."
-    echo "[INFO] the created image is named $IMG_NAME"
+    echo "[INFO] the created image is named $NGINX_IMG_NAME"
     echo "[INFO] the generated docker-compose file is located at $NGINX_ROOT_FOLDER/docker-compose.yml"
 }
 
@@ -141,7 +157,7 @@ parse_cmd_args() {
             ;;
         -t | --type)
             case "$2" in
-                php-fpm | proxy | server)
+                php | proxy | server)
                     TYPE="$2"
                     ;;
                 *)
@@ -237,6 +253,10 @@ create)
         echo "[LOG] Adding proxy server..."
         create_server_files
         ;;
+    php)
+        echo "[LOG] Adding php-fpm server..."
+        create_server_files
+        ;;
     esac
     if start_docker_compose; then
         log_infos
@@ -248,29 +268,29 @@ create)
 
 enable)
     # check if the configuration file exists and change the extension then reload the server
-    if [ -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled ]; then
+    if [ -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled ]; then
         echo "[LOG] Enabling block server $SERVER_NAME ..."
-        mv $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf
+        mv $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf
         docker exec anismk-nginx-server nginx -s reload
         if [ $? ]; then
             echo "[LOG] $SERVER_NAME enabled successfully."
         fi
     else
-        echo "[ERROR] Can't find the configuration file '$NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled'"
+        echo "[ERROR] Can't find the configuration file '$NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled'"
         exit 1
     fi
     ;;
 disable)
     # change the extension of the config file and then reload the nginx server to disable it
-    if [ -f $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf ]; then
+    if [ -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf ]; then
         echo "[LOG] Disabling block server $SERVER_NAME ..."
-        mv $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf $NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf.disabled
+        mv $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled
         docker exec anismk-nginx-server nginx -s reload
         if [ $? ]; then
             echo "[LOG] $SERVER_NAME disabled successfully."
         fi
     else
-        echo "[ERROR] Can't find the configuration file '$NGINX_ROOT_FOLDER/config/conf.d/$SERVER_NAME.conf'"
+        echo "[ERROR] Can't find the configuration file '$NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf'"
         exit 1
     fi
     ;;

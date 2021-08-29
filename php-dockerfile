@@ -1,0 +1,40 @@
+FROM php:7-fpm-alpine
+
+RUN echo $PHP_INI_DIR
+
+# Make a fixed configutation folder to be shared among the host and the image
+RUN ln -s "$PHP_INI_DIR" "/php-fpm"
+
+# Use the default production configuration
+RUN mv "/php-fpm/php.ini-production" "/php-fpm/php.ini"
+
+# install php extension here
+
+# RUN apt-get update && apt-get install -y \
+#         libfreetype6-dev \
+#         libjpeg62-turbo-dev \
+#         libpng-dev \
+#     && docker-php-ext-configure gd --with-freetype --with-jpeg \
+#     && docker-php-ext-install -j$(nproc) gd
+
+# RUN pecl install redis-5.1.1 \
+#     && pecl install xdebug-2.8.1 \
+#     && docker-php-ext-enable redis xdebug
+
+# RUN apt-get update && apt-get install -y libmemcached-dev zlib1g-dev \
+#     && pecl install memcached-2.2.0 \
+#     && docker-php-ext-enable memcached
+
+# RUN curl -fsSL 'https://xcache.lighttpd.net/pub/Releases/3.2.0/xcache-3.2.0.tar.gz' -o xcache.tar.gz \
+#     && mkdir -p xcache \
+#     && tar -xf xcache.tar.gz -C xcache --strip-components=1 \
+#     && rm xcache.tar.gz \
+#     && ( \
+#         cd xcache \
+#         && phpize \
+#         && ./configure --enable-xcache \
+#         && make -j "$(nproc)" \
+#         && make install \
+#     ) \
+#     && rm -r xcache \
+#     && docker-php-ext-enable xcache
