@@ -20,7 +20,7 @@ services:
     php:
         image: anismk/php-fpm
         volumes:
-            - ${NGINX_ROOT_FOLDER}/srv:/var/www/html
+            - ${NGINX_ROOT_FOLDER}/srv:/srv
             - ${NGINX_ROOT_FOLDER}/config/php:/php-fpm
         networks:
             - nginx-network

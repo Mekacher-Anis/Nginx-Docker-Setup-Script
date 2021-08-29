@@ -2,11 +2,13 @@ FROM php:7-fpm-alpine
 
 RUN echo $PHP_INI_DIR
 
+# Use the default production configuration
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
 # Make a fixed configutation folder to be shared among the host and the image
 RUN ln -s "$PHP_INI_DIR" "/php-fpm"
 
-# Use the default production configuration
-RUN mv "/php-fpm/php.ini-production" "/php-fpm/php.ini"
+RUN if [ ! -d /srv ]; then mkdir /srv; fi
 
 # install php extension here
 

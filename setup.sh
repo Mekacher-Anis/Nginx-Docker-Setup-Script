@@ -37,6 +37,8 @@ check_dirs() {
     if [ ! -f $NGINX_ROOT_FOLDER/config/nginx/nginx.conf ]; then
         cp nginx.conf $NGINX_ROOT_FOLDER/config/nginx/nginx.conf
         cp mime.types $NGINX_ROOT_FOLDER/config/nginx/mime.types
+        cp fastcgi_params $NGINX_ROOT_FOLDER/config/nginx/fastcgi_params
+        cp php.ini $NGINX_ROOT_FOLDER/config/php/php.ini
         chown -R $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/config
         # php-fpm default configuration file is already available on the image
     fi
@@ -59,6 +61,10 @@ delete_dirs() {
 
 create_server_files() {
     if [ ! -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf ]; then
+        # escape $document_root and $fastcgi_script_name
+        document_root='$document_root'
+        fastcgi_script_name='$fastcgi_script_name'
+        export document_root fastcgi_script_name 
         # generate and copy server config file
         envsubst < $TYPE-template.conf >$SERVER_NAME.conf
         mv $SERVER_NAME.conf $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf
@@ -238,7 +244,7 @@ parse_cmd_args $@
 
 # always check if all required packages are installed
 # and the directory structure exists
-check_packages
+# check_packages
 check_dirs
 
 # hmmmm pure functions, aren't my thing, that's why the code is a bit of a mess :D
