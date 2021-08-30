@@ -8,8 +8,10 @@ services:
         volumes:
             - ${NGINX_ROOT_FOLDER}/logs:/logs
             - ${NGINX_ROOT_FOLDER}/srv:/srv
-            - ${NGINX_ROOT_FOLDER}/tls:/tls
             - ${NGINX_ROOT_FOLDER}/config/nginx:/etc/nginx
+            - ${NGINX_ROOT_FOLDER}/tls/config:/etc/letsencrypt
+            - ${NGINX_ROOT_FOLDER}/tls/work_dir:/var/lib/letsencrypt
+            - ${NGINX_ROOT_FOLDER}/tls/log:/var/log/letsencrypt
         restart: unless-stopped
         depends_on:
             - php

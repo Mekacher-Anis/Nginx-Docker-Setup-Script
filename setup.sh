@@ -30,7 +30,9 @@ check_dirs() {
     if [ ! -d $NGINX_ROOT_FOLDER/config/nginx/conf.d ]; then mkdir -p $NGINX_ROOT_FOLDER/config/nginx/conf.d; fi
     if [ ! -d $NGINX_ROOT_FOLDER/config/php/confg.d ]; then mkdir -p $NGINX_ROOT_FOLDER/config/php/conf.d; fi
     if [ ! -d $NGINX_ROOT_FOLDER/srv/$SERVER_NAME ]; then mkdir -p $NGINX_ROOT_FOLDER/srv/$SERVER_NAME; fi
-    if [ ! -d $NGINX_ROOT_FOLDER/tls ]; then mkdir -p $NGINX_ROOT_FOLDER/tls; fi
+    if [ ! -d $NGINX_ROOT_FOLDER/tls/log ]; then mkdir -p $NGINX_ROOT_FOLDER/tls/log; fi
+    if [ ! -d $NGINX_ROOT_FOLDER/tls/work_dir ]; then mkdir -p $NGINX_ROOT_FOLDER/tls/work_dir; fi
+    if [ ! -d $NGINX_ROOT_FOLDER/tls/config ]; then mkdir -p $NGINX_ROOT_FOLDER/tls/config; fi
     chown -R $USERNAME:$USERNAME $NGINX_ROOT_FOLDER
 
     # move default configuration files
@@ -127,6 +129,16 @@ log_infos() {
     echo "[INFO] nginx data folder is located at $NGINX_ROOT_FOLDER please add new websites there."
     echo "[INFO] the created image is named $NGINX_IMG_NAME"
     echo "[INFO] the generated docker-compose file is located at $NGINX_ROOT_FOLDER/docker-compose.yml"
+}
+
+# request letsencrypt certificate
+request_certificate() {
+    docker exec $NGINX_IMG_NAME /usr/bin/certbot --nginx \
+                -n -m "anismekacher@outlook.com" \
+                -d $SERVER_NAME \
+                --cert-name $SERVER_NAME \
+                --agree-tos \
+                --quiet
 }
 
 parse_cmd_args() {
