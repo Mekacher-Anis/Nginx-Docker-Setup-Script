@@ -37,12 +37,16 @@ cp /home/$USER/nginx-data/config/conf.d/default.conf /home/$USER/nginx-data/conf
 `sudo docker exec anismk-nginx-server nginx -s reload`
 
 # Todo
+- [ ] update readme file (because it's way too fucking old)
+- [ ] add a cron job for certificate renewal (so that we don't rely on the cron job inside the image)
 - [x] make it easier to add new server quickly
 - [x] add a way to specify the host IP as proxied ip address 
 - [x] add the functionality to signal nginx to reload the data.
-- [ ] add the functionality to start certbot and automatically request a let's encrypt certificate.
-- [ ] add script (perhaps saved in /usr/bin) to easily add virual server or proxy servers.
+- [x] add the functionality to start certbot and automatically request a let's encrypt certificate.
 - [ ] add the functionality to easily update nginx to latest version.
 - [x] add the functionality to disable/remove a server.
-- [ ] add basic support for php-fpm and/or apache for serving php files.
+- [x] add basic support for php-fpm and/or apache for serving php files.
 - [ ] add a simple way to list all available servers and if they're active or not
+- [ ] make the script installable
+- [ ] add option to easily make compressed and encrypted backups
+- [ ] add option to automatically create periodic backups and upload them to a remote server.
