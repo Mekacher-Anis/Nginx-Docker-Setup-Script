@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
 NGINX_IMG_NAME='anismk/nginx-server'
+CONTAINER_NAME='anismk-nginx-server'
 
 # check required packages
 check_packages() {
@@ -134,7 +135,7 @@ log_infos() {
 # request letsencrypt certificate
 request_certificate() {
     # this should request the certificate, configure it and reload nginx automatically
-    docker exec $NGINX_IMG_NAME /usr/bin/certbot \
+    docker exec $CONTAINER_NAME /usr/bin/certbot \
                 --nginx \
                 -m "$EMAIL" \
                 -d "$SERVER_NAME" \
