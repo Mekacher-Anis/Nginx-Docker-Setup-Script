@@ -299,7 +299,9 @@ create)
     if start_docker_compose; then
         if [ $SSL == true ]; then
             echo "Waiting for nginx to start..."
-            while ! nc -z 127.0.0.1 80; do sleep 3 done
+            while ! nc -z 127.0.0.1 80; do 
+                sleep 3 
+            done
             request_certificate
         fi
 
