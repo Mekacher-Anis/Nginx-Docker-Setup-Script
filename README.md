@@ -50,3 +50,4 @@ cp /home/$USER/nginx-data/config/conf.d/default.conf /home/$USER/nginx-data/conf
 - [ ] make the script installable
 - [ ] add option to easily make compressed and encrypted backups
 - [ ] add option to automatically create periodic backups and upload them to a remote server.
+- [ ] improve logging (because this [log] and [info] shit doesn't make sense)
