@@ -142,7 +142,6 @@ request_certificate() {
                 --agree-tos \
                 -n \
                 --quiet
-                --dry-run
 }
 
 parse_cmd_args() {
