@@ -133,18 +133,21 @@ log_infos() {
 
 # request letsencrypt certificate
 request_certificate() {
-    docker exec $NGINX_IMG_NAME /usr/bin/certbot --nginx \
-                -n -m "anismekacher@outlook.com" \
-                -d $SERVER_NAME \
-                --cert-name $SERVER_NAME \
+    # this should request the certificate, configure it and reload nginx automatically
+    docker exec $NGINX_IMG_NAME /usr/bin/certbot \
+                --nginx \
+                -m "$EMAIL" \
+                -d "$SERVER_NAME" \
                 --agree-tos \
+                -n \
                 --quiet
+                --dry-run
 }
 
 parse_cmd_args() {
     # parse command line arguments
-    OPTIONS=u:p:d:t:s:
-    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable
+    OPTIONS=u:p:d:t:s:m:
+    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable,ssl,email:
 
     ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
@@ -159,6 +162,8 @@ parse_cmd_args() {
     ACTION='create'
     TYPE='server'
     PROXIED_SERVER=''
+    SSL=false
+    EMAIL=''
     while true; do
         case "$1" in
         -u | --user)
@@ -201,6 +206,14 @@ parse_cmd_args() {
             ACTION='disable'
             shift
             ;;
+        --ssl)
+            SSL=true
+            shift
+            ;;
+        -m | --email)
+            EMAIL="$2"
+            shift 2
+            ;;
         --)
             shift
             break
@@ -223,8 +236,13 @@ parse_cmd_args() {
         exit 1
     fi
 
-    if [[ $TYPE = 'proxy' && -z $PROXIED_SERVER ]]; then
-        echo "Type is proxy server but not proxied server is defined, please it using '-s | --proxiedServer' option"
+    if [[ $TYPE == 'proxy' && -z $PROXIED_SERVER ]]; then
+        echo "Type is proxy server but no proxied server is defined, please it using '-s | --proxiedServer' option"
+        exit 1
+    fi
+
+    if [[ $ACTION == 'create' && $SSL == true && -z $EMAIL ]]; then
+        echo "Please provide an email for let's encrypt certificate notifications usind '-m | --email' option"
         exit 1
     fi
 
@@ -239,6 +257,8 @@ parse_cmd_args() {
     export TYPE
     export PROXIED_SERVER
     export ACTION
+    export SSL
+    export EMAIL
 
     # echo -e "[CONFIG]\nselected user\t: ${USERNAME}\nroot folder\t: ${NGINX_ROOT_FOLDER}\nnew server name\t: ${SERVER_NAME}\n"
 }
@@ -277,6 +297,12 @@ create)
         ;;
     esac
     if start_docker_compose; then
+        if [ $SSL == true ]; then
+            echo "Waiting for nginx to start..."
+            while ! nc -z 127.0.0.1 80; do sleep 3 done
+            request_certificate
+        fi
+
         log_infos
     else
         echo "[ERROR] sorry, something went wrong, couldn't start nginx-server."
