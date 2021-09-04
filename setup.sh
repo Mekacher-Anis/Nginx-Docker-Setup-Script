@@ -10,7 +10,7 @@ check_packages() {
         apt-get install curl -y
     fi
     if [[ $(dpkg -l | grep 'docker-ce') ]]; then
-        echo "[INFO] docker already installed."
+        echo "[LOG] docker already installed."
     else
         echo "[LOG] installing docker..."
         curl -fsSL https://get.docker.com -o get-docker.sh
@@ -26,7 +26,10 @@ check_packages() {
 
 # create necessary directories
 check_dirs() {
-    echo "[LOG] checking/creating necessary directories..."
+    if [ $ACTION == 'create' ]; then
+        echo "[LOG] checking/creating necessary directories..."
+    fi
+
     if [ ! -d $NGINX_ROOT_FOLDER/logs/$SERVER_NAME ]; then mkdir -p $NGINX_ROOT_FOLDER/logs/$SERVER_NAME; fi
     if [ ! -d $NGINX_ROOT_FOLDER/config/nginx/conf.d ]; then mkdir -p $NGINX_ROOT_FOLDER/config/nginx/conf.d; fi
     if [ ! -d $NGINX_ROOT_FOLDER/config/php/confg.d ]; then mkdir -p $NGINX_ROOT_FOLDER/config/php/conf.d; fi
@@ -126,10 +129,9 @@ start_docker_compose() {
 
 # log infos
 log_infos() {
-    echo "[INFO] server started successfully !"
-    echo "[INFO] nginx data folder is located at $NGINX_ROOT_FOLDER please add new websites there."
-    echo "[INFO] the created image is named $NGINX_IMG_NAME"
-    echo "[INFO] the generated docker-compose file is located at $NGINX_ROOT_FOLDER/docker-compose.yml"
+    echo "[LOG] nginx data folder is located at '$NGINX_ROOT_FOLDER'"
+    echo "[LOG] an nginx and php images have been created and started successfully."
+    echo "[LOG] the generated docker-compose file is located at $NGINX_ROOT_FOLDER/docker-compose.yml"
 }
 
 # request letsencrypt certificate
@@ -146,8 +148,8 @@ request_certificate() {
 
 parse_cmd_args() {
     # parse command line arguments
-    OPTIONS=u:p:d:t:s:m:
-    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable,ssl,email:
+    OPTIONS=u:p:d:t:s:m:l
+    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable,ssl,email:,list
 
     ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
@@ -206,6 +208,10 @@ parse_cmd_args() {
             ACTION='disable'
             shift
             ;;
+        -l | --list)
+            ACTION='list'
+            shift
+            ;;
         --ssl)
             SSL=true
             shift
@@ -231,7 +237,7 @@ parse_cmd_args() {
         exit 1
     fi
 
-    if [ -z $SERVER_NAME ]; then
+    if [[ $ACTION != 'list' && -z $SERVER_NAME ]]; then
         echo "Please specify the domain name of the service using the '-d | --domain' option"
         exit 1
     fi
@@ -312,6 +318,22 @@ create)
     ;;
 
 
+list)
+    echo -e "\nEnabled servers :\n"
+    enabled=$(ls  $NGINX_ROOT_FOLDER/config/nginx/conf.d/*.conf  2> /dev/null | xargs -n1 basename  2> /dev/null | sed 's/\.conf//')
+    if [ $? ]; then
+        for server in $enabled; do
+            echo $server
+        done
+    fi
+    echo -e "\nDisabled servers :\n"
+    disabled=$(ls  $NGINX_ROOT_FOLDER/config/nginx/conf.d/*.conf.disabled 2> /dev/null | xargs -n1 basename 2> /dev/null  | sed 's/\.conf.disabled//')
+    if [ $? ]; then
+        echo -n $disabled
+    fi
+    printf '\n\n'
+    ;;
+
 enable)
     # check if the configuration file exists and change the extension then reload the server
     if [ -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled ]; then
@@ -347,6 +369,7 @@ delete)
         printf "\n[LOG] Deleting %s ...\n" $SERVER_NAME
         delete_dirs
         docker exec anismk-nginx-server nginx -s reload
+        echo "The server and its files have been deleted successfully. The TLS certificates have not been deleted."
     fi
     ;;
 esac
