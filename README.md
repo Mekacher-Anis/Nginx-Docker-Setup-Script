@@ -4,20 +4,20 @@ One-click bash (debian) setup script for nginx with docker.
 # basic commands
 The script must be ran with root previliges.\
 The script needs a username and a domain name specified using `-u` and `-d` options
-## Add static file server
+### Add static file server
 `sudo ./setup.sh -u user -d example.com`
-## Add proxy server
+### Add proxy server
 `sudo ./setup.sh -u user -t proxy -d example.com -s http://docker.host.ip:8080`
-## Add php enabled server
+### Add php enabled server
 `sudo ./setup.sh -u user -t php -d example.com`
-## Enable SSL encryption
+### Enable SSL encryption
 Just append `--ssl` to any of the previous commands to automatically request an SSL certificate \
 `sudo ./setup.sh -u user -d example.com --ssl -m email@example.com`
-## Disable/enable a server
+### Disable/enable a server
 `sudo ./setup.sh -u user -d example.com --enable/disable`
-## Delete server and all files
+### Delete server and all files
 `sudo ./setup.sh -u user -d example.com --delete`
-## reload the nginx configuration manually
+### reload the nginx configuration manually
 `sudo docker exec anismk-nginx-server nginx -s reload`
 
 # command line arguments
