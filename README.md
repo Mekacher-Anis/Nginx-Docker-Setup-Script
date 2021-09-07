@@ -1,5 +1,5 @@
 # Nginx-Docker-Setup-Script
-One-click bash (debian) setup script for nginx with docker.
+Bash (debian) script for setting up nginx with docker.
 
 # basic commands
 The script must be ran with root previliges.\
