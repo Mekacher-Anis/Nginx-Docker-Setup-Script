@@ -46,7 +46,7 @@ Just append `--ssl` to any of the previous commands to automatically request an 
 - [x] add basic support for php-fpm and/or apache for serving php files.
 - [x] add a simple way to list all available servers and if they're active or not
 - [x] improve logging (because this [log] and [info] shit doesn't make sense)
-- [ ] add a cron job for certificate renewal (so that we don't rely on the cron job inside the image)
+- [x] add systemd timer for checking certifcate renewals.
 - [ ] make the script installable
 - [ ] add option to easily make compressed and encrypted backups
 - [ ] add option to automatically create periodic backups and upload them to a remote server.
