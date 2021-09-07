@@ -1,0 +1,9 @@
+[Unit]
+Description=Timer for renewing certbot certifactes
+
+[Timer]
+Unit=certbot.renew.service
+OnCalendar=daily
+
+[Install]
+WantedBy=timers.target

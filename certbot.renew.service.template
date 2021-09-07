@@ -1,0 +1,5 @@
+[Unit]
+Description=Service for snap application certbot.renew
+
+[Service]
+ExecStart=${NGINX_ROOT_FOLDER}/renew-cert.sh

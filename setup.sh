@@ -137,6 +137,7 @@ log_infos() {
 # request letsencrypt certificate
 request_certificate() {
     # this should request the certificate, configure it and reload nginx automatically
+    echo "[LOG] Requesting SSL certificate."
     docker exec $CONTAINER_NAME /usr/bin/certbot \
                 --nginx \
                 -m "$EMAIL" \
@@ -144,6 +145,17 @@ request_certificate() {
                 --agree-tos \
                 -n \
                 --quiet
+    
+    # move renewal script and set systemd timer
+    echo "[LOG] Installing certificate renewal timer."
+    cp renew-cert.sh $NGINX_ROOT_FOLDER/renew-cert.sh
+    chown $USERNAME:$USERNAME $NGINX_ROOT_FOLDER/renew-cert.sh
+    chmod u+x $NGINX_ROOT_FOLDER/renew-cert.sh
+    envsubst < certbot.renew.service.template > certbot.renew.service
+    cp certbot.renew.timer /etc/systemd/system/certbot.renew.timer
+    mv certbot.renew.service /etc/systemd/system/certbot.renew.service
+    systemctl daemon-reload
+    systemctl enable --now certbot.renew.timer
 }
 
 parse_cmd_args() {
