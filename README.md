@@ -21,6 +21,10 @@ Just append `--ssl` to any of the previous commands to automatically request an 
 `sudo docker exec anismk-nginx-server nginx -s reload`
 ### list all configured servers
 `sudo ./setup.sh -u user -l`
+### install the script for easier access
+To be able to run this script more easily without having to cd to this folder, run the following command. \
+`sudo ./setup.sh -u user -i` \
+This script will then be avaible by calling `ndss` from the command line
 
 # command line arguments
 |argument|default|description|
@@ -35,6 +39,8 @@ Just append `--ssl` to any of the previous commands to automatically request an 
 | --disable | - | disable the server for the specified domain |
 | --enable | - | enable an already disabled server for a domain |
 | --delete | - | delete the server for the specified domain and all its files |
+| -l --list | - | list all the configured servers. |
+| -i --install | - | install this script to make it more accessible using `ndss` command |
 
 # Todo
 - [x] update readme file (because it's way too fucking old)

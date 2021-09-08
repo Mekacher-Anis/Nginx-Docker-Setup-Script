@@ -160,8 +160,8 @@ request_certificate() {
 
 parse_cmd_args() {
     # parse command line arguments
-    OPTIONS=u:p:d:t:s:m:l
-    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable,ssl,email:,list
+    OPTIONS=u:p:d:t:s:m:li
+    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable,ssl,email:,list,install
 
     ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
@@ -232,6 +232,10 @@ parse_cmd_args() {
             EMAIL="$2"
             shift 2
             ;;
+        -i | --install)
+            ACTION='install'
+            shift
+            ;;
         --)
             shift
             break
@@ -249,7 +253,7 @@ parse_cmd_args() {
         exit 1
     fi
 
-    if [[ $ACTION != 'list' && -z $SERVER_NAME ]]; then
+    if [[ $ACTION != 'list' && $ACTION != 'install' && -z $SERVER_NAME ]]; then
         echo "Please specify the domain name of the service using the '-d | --domain' option"
         exit 1
     fi
@@ -383,5 +387,10 @@ delete)
         docker exec anismk-nginx-server nginx -s reload
         echo "The server and its files have been deleted successfully. The TLS certificates have not been deleted."
     fi
+    ;;
+
+install)
+    cp -r . /home/$USERNAME/.ndss/
+    ln -s /home/$USERNAME/.ndss/setup.sh /usr/local/bin/ndss
     ;;
 esac
