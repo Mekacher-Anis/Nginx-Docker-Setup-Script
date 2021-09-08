@@ -160,8 +160,8 @@ request_certificate() {
 
 parse_cmd_args() {
     # parse command line arguments
-    OPTIONS=u:p:d:t:s:m:li
-    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable,ssl,email:,list,install
+    OPTIONS=u:p:d:t:s:m:lib
+    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable,ssl,email:,list,install,backup
 
     ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
@@ -236,6 +236,10 @@ parse_cmd_args() {
             ACTION='install'
             shift
             ;;
+        -b | --backup)
+            ACTION='backup'
+            shift
+            ;;
         --)
             shift
             break
@@ -253,7 +257,7 @@ parse_cmd_args() {
         exit 1
     fi
 
-    if [[ $ACTION != 'list' && $ACTION != 'install' && -z $SERVER_NAME ]]; then
+    if [[ $ACTION != 'list' && $ACTION != 'install' && $ACTION != 'backup' && -z $SERVER_NAME ]]; then
         echo "Please specify the domain name of the service using the '-d | --domain' option"
         exit 1
     fi
@@ -393,4 +397,8 @@ install)
     cp -r . /home/$USERNAME/.ndss/
     ln -s /home/$USERNAME/.ndss/setup.sh /usr/local/bin/ndss
     ;;
+
+backup)
+    tar -C $NGINX_ROOT_FOLDER -czf /home/$USERNAME/nginx-backup.tar.gz .
+    echo "The archive is located at /home/$USERNAME/nginx-backup.tar.gz"
 esac
