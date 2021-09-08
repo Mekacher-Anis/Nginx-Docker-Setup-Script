@@ -53,7 +53,7 @@ This script will then be avaible by calling `ndss` from the command line
 - [x] add a simple way to list all available servers and if they're active or not
 - [x] improve logging (because this [log] and [info] shit doesn't make sense)
 - [x] add systemd timer for checking certifcate renewals.
-- [ ] make the script installable
+- [x] make the script installable
 - [ ] add option to easily make compressed and encrypted backups
 - [ ] add option to automatically create periodic backups and upload them to a remote server.
 - [ ] add the functionality to easily update nginx to latest version.
