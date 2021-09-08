@@ -25,6 +25,8 @@ Just append `--ssl` to any of the previous commands to automatically request an 
 To be able to run this script more easily without having to cd to this folder, run the following command. \
 `sudo ./setup.sh -u user -i` \
 This script will then be avaible by calling `ndss` from the command line
+### make a backup of the configuration
+`sudo ./setup.sh -u user -b`
 
 # command line arguments
 |argument|default|description|
@@ -40,6 +42,7 @@ This script will then be avaible by calling `ndss` from the command line
 | --enable | - | enable an already disabled server for a domain |
 | --delete | - | delete the server for the specified domain and all its files |
 | -l --list | - | list all the configured servers. |
+| -b --backup | - | creates a gzipped tar file and saves it in the user's home directory |
 | -i --install | - | install this script to make it more accessible using `ndss` command |
 
 # Todo
