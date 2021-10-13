@@ -54,13 +54,13 @@ check_dirs() {
 delete_dirs() {
     if [ -d $NGINX_ROOT_FOLDER/logs/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/logs/$SERVER_NAME; fi
     if [ -d $NGINX_ROOT_FOLDER/srv/$SERVER_NAME ]; then rm -r $NGINX_ROOT_FOLDER/srv/$SERVER_NAME; fi
-    if [ -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf ]; then 
+    if [ -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf ]; then
         rm $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf;
     fi
-    if [ -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled ]; then 
+    if [ -f $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled ]; then
         rm $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf.disabled;
     fi
-    if [ -f $NGINX_ROOT_FOLDER/config/php/conf.d/$SERVER_NAME.ini ]; then 
+    if [ -f $NGINX_ROOT_FOLDER/config/php/conf.d/$SERVER_NAME.ini ]; then
         rm $NGINX_ROOT_FOLDER/config/php/conf.d/$SERVER_NAME.ini;
     fi
 }
@@ -70,7 +70,7 @@ create_server_files() {
         # escape $document_root and $fastcgi_script_name
         document_root='$document_root'
         fastcgi_script_name='$fastcgi_script_name'
-        export document_root fastcgi_script_name 
+        export document_root fastcgi_script_name
         # generate and copy server config file
         envsubst < $TYPE-template.conf >$SERVER_NAME.conf
         mv $SERVER_NAME.conf $NGINX_ROOT_FOLDER/config/nginx/conf.d/$SERVER_NAME.conf
@@ -108,6 +108,10 @@ create_images() {
 
 # generate docker compose configuration and start server
 start_docker_compose() {
+    # export project name to be used by docker compose
+    COMPOSE_PROJECT_NAME='ndss'
+    export COMPOSE_PROJECT_NAME
+
     # if nginx image doesn't exist then build it
     create_images
 
@@ -145,7 +149,7 @@ request_certificate() {
                 --agree-tos \
                 -n \
                 --quiet
-    
+
     # move renewal script and set systemd timer
     echo "[LOG] Installing certificate renewal timer."
     cp renew-cert.sh $NGINX_ROOT_FOLDER/renew-cert.sh
@@ -306,7 +310,7 @@ parse_cmd_args $@
 check_dirs
 
 # hmmmm pure functions, aren't my thing, that's why the code is a bit of a mess :D
-case $ACTION in 
+case $ACTION in
 create)
     case $TYPE in
     server)
@@ -325,8 +329,8 @@ create)
     if start_docker_compose; then
         if [ $SSL == true ]; then
             echo "Waiting for nginx to start..."
-            while ! nc -z 127.0.0.1 80; do 
-                sleep 3 
+            while ! nc -z 127.0.0.1 80; do
+                sleep 3
             done
             request_certificate
         fi
