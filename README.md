@@ -3,7 +3,8 @@ Bash (debian) script for setting up nginx with docker.
 
 # basic commands
 The script must be ran with root previliges.\
-The script needs a username and a domain name specified using `-u` and `-d` options
+The script needs a username specified using `-u` option. \
+After the script is installed you can run it from any directory using `sudo ndss` instead of `sudo ./setup.sh`.
 ### Add static file server
 `sudo ./setup.sh -u user -d example.com`
 ### Add proxy server
@@ -28,6 +29,15 @@ This script will then be avaible by calling `ndss` from the command line
 ### make a backup of the configuration
 `sudo ./setup.sh -u user -b`
 
+### udpate nginx / php version
+`sudo ./setup.sh -u user --update`
+
+### shutdown running containers
+`sudo ./setup.sh -u user --shutdown`
+
+### stop containers and remove built images
+`sudo ./setup.sh -u user --clean`
+
 # command line arguments
 |argument|default|description|
 |:---: | :--: | :---------: |
@@ -44,6 +54,9 @@ This script will then be avaible by calling `ndss` from the command line
 | -l --list | - | list all the configured servers. |
 | -b --backup | - | creates a gzipped tar file and saves it in the user's home directory |
 | -i --install | - | install this script to make it more accessible using `ndss` command |
+| --update | - | backup the old configuration and update the nginx base images |
+| --shutdown | - | shutsdown running containers |
+| --clean | - | shutsdown running containers and removes the built images. |
 
 # Todo
 - [x] update readme file (because it's way too fucking old)
@@ -58,5 +71,8 @@ This script will then be avaible by calling `ndss` from the command line
 - [x] add systemd timer for checking certifcate renewals.
 - [x] make the script installable
 - [x] add option to easily make compressed backups
-- [ ] add the functionality to easily update nginx to latest version.
+- [x] add the functionality to easily update nginx to latest version.
+- [ ] build release package and update instructions on how to install the script
+- [ ] make it easier to add foreign container to the nginx network
 - [ ] add a check to stop the script if one of the actions requires the container to be already running but it's not
+- [ ] clean the directory structure

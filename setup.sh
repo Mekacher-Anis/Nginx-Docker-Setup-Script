@@ -94,26 +94,31 @@ create_server_files() {
     fi
 }
 
-# create the required nginx image
+# create the required nginx images
 create_images() {
-    if [[ "$(docker images -q $NGINX_IMG_NAME 2> /dev/null)" == "" ]]; then
+    if [ ! $1 ]; then
         echo "[LOG] building nginx image..."
         docker build -f nginx-dockerfile -t $NGINX_IMG_NAME . 1>/dev/null
-    fi
-    if [[ "$(docker images -q anismk/php-fpm 2> /dev/null)" == "" ]]; then
         echo "[LOG] building php image..."
         docker build -f php-dockerfile -t anismk/php-fpm . 1>/dev/null
+    else
+        echo "[LOG] building nginx image (force pull)..."
+        docker build --pull -f nginx-dockerfile -t $NGINX_IMG_NAME . 1>/dev/null
+        echo "[LOG] building php image (force pull)..."
+        docker build --pull -f php-dockerfile -t anismk/php-fpm . 1>/dev/null
+        
     fi
 }
 
 # generate docker compose configuration and start server
-start_docker_compose() {
+build_config_start_docker_compose() {
     # export project name to be used by docker compose
     COMPOSE_PROJECT_NAME='ndss'
     export COMPOSE_PROJECT_NAME
 
-    # if nginx image doesn't exist then build it
-    create_images
+    if [[ "$(docker images -q $NGINX_IMG_NAME 2> /dev/null)" == "" || "$(docker images -q anismk/php-fpm 2> /dev/null)" == "" ]]; then
+        create_images
+    fi
 
     # if the image is already running, then simply reload the configuration
     if [[ $(docker ps | grep anismk-nginx-server) ]]; then
@@ -165,7 +170,7 @@ request_certificate() {
 parse_cmd_args() {
     # parse command line arguments
     OPTIONS=u:p:d:t:s:m:lib
-    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable,ssl,email:,list,install,backup
+    LONGOPTS=user:,path:,domain:,type:,proxiedServer:,delete,enable,disable,ssl,email:,list,install,backup,update,shutdown,clean
 
     ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
@@ -244,6 +249,22 @@ parse_cmd_args() {
             ACTION='backup'
             shift
             ;;
+        --update)
+            ACTION='update'
+            shift
+            ;;
+        --restore)
+            ACTION='restore'
+            shift
+            ;;
+        --shutdown)
+            ACTION='shutdown'
+            shift
+            ;;
+        --clean)
+            ACTION='clean'
+            shift
+            ;;
         --)
             shift
             break
@@ -261,7 +282,7 @@ parse_cmd_args() {
         exit 1
     fi
 
-    if [[ $ACTION != 'list' && $ACTION != 'install' && $ACTION != 'backup' && -z $SERVER_NAME ]]; then
+    if [[ $ACTION != 'list' && $ACTION != 'install' && $ACTION != 'backup' && $ACTION != 'update' && $ACTION != 'shutdown' && $ACTION != 'clean' && -z $SERVER_NAME ]]; then
         echo "Please specify the domain name of the service using the '-d | --domain' option"
         exit 1
     fi
@@ -293,6 +314,46 @@ parse_cmd_args() {
     # echo -e "[CONFIG]\nselected user\t: ${USERNAME}\nroot folder\t: ${NGINX_ROOT_FOLDER}\nnew server name\t: ${SERVER_NAME}\n"
 }
 
+
+# update existing containers
+update() {
+    if [ -f $NGINX_ROOT_FOLDER/docker-compose.yml ]; then
+        echo -e "!! WARNING !!\nThe server will be unavailable for a short period of time while switching between the old and new instance.\nDo you want to continue [y/n]:"
+        read -n 1 ans
+        if [ $ans = 'y' ]; then
+            # make a backup of the old configuration
+            echo -e "\nA backup of the old configuration has been made at /home/$USERNAME/nginx-backup.tar.gz.\n You can restore this version by running this script with '--restore' command"
+            tar -C $NGINX_ROOT_FOLDER -czf /home/$USERNAME/nginx-backup.tar.gz .
+
+            # build the new images
+            create_images 1
+            
+            # respawn containers
+            CWD=$(pwd)
+            cd $NGINX_ROOT_FOLDER
+
+            COMPOSE_PROJECT_NAME='ndss'
+            export COMPOSE_PROJECT_NAME
+
+            docker-compose down
+            docker-compose up -d 1>/dev/null # will automatically rebuild images if needed
+
+            if [ ! $? ]; then
+                echo "[ERROR] Update failed. Images need to be rebuilt manually and servers restored from backup."
+                cd $CWD
+                exit 1
+            else 
+                echo "Containers have been updated successfully."
+            fi
+
+            cd $CWD
+        fi
+    else
+        echo "[ERROR] Can't upgrade images, as no previous configuration was found."
+        exit 1
+    fi
+}
+
 ####################################################
 ################### main script ####################
 ####################################################
@@ -305,9 +366,11 @@ fi
 parse_cmd_args $@
 
 # always check if all required packages are installed
+check_packages
 # and the directory structure exists
-# check_packages
-check_dirs
+if [ $ACTION != 'clean' ]; then
+    check_dirs
+fi
 
 # hmmmm pure functions, aren't my thing, that's why the code is a bit of a mess :D
 case $ACTION in
@@ -326,7 +389,7 @@ create)
         create_server_files
         ;;
     esac
-    if start_docker_compose; then
+    if build_config_start_docker_compose; then
         if [ $SSL == true ]; then
             echo "Waiting for nginx to start..."
             while ! nc -z 127.0.0.1 80; do
@@ -405,4 +468,34 @@ install)
 backup)
     tar -C $NGINX_ROOT_FOLDER -czf /home/$USERNAME/nginx-backup.tar.gz .
     echo "The archive is located at /home/$USERNAME/nginx-backup.tar.gz"
+    ;;
+
+update)
+    update
+    ;;
+
+shutdown | clean)
+    # stop and remove containers
+    if [ -d $NGINX_ROOT_FOLDER ]; then
+        echo "[LOG] Shutting down containers..."
+        CWD=$(pwd)
+        cd $NGINX_ROOT_FOLDER
+        COMPOSE_PROJECT_NAME='ndss'
+        export COMPOSE_PROJECT_NAME
+        docker-compose down
+        cd $CWD
+    fi
+    # remove images if requested
+    if [ $ACTION == 'clean' ]; then
+        if [[ "$(docker images -q $NGINX_IMG_NAME 2> /dev/null)" != "" ]]; then
+            echo "[LOG] Removing nginx image..."
+            docker image rm $NGINX_IMG_NAME 1>/dev/null
+        fi
+        if [[ "$(docker images -q anismk/php-fpm 2> /dev/null)" != "" ]]; then
+            echo "[LOG] Removing php-fpm image..."
+            docker image rm anismk/php-fpm 1>/dev/null
+        fi
+        echo "[LOG] All clean."
+    fi
+    ;;
 esac
