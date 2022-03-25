@@ -322,8 +322,8 @@ update() {
         read -n 1 ans
         if [ $ans = 'y' ]; then
             # make a backup of the old configuration
-            echo -e "\n[LOG] Creating backup of the old configuration..."
-            tar -C $NGINX_ROOT_FOLDER -czf /home/$USERNAME/nginx-backup.tar.gz .
+            echo -e "\n[LOG] Creating backup of the old configuration (without logs)..."
+            tar -C $NGINX_ROOT_FOLDER --exclude 'logs/*' -czf /home/$USERNAME/nginx-backup.tar.gz .
             echo -e "A backup of the old configuration has been made at /home/$USERNAME/nginx-backup.tar.gz.\nYou can restore this version by running this script with '--restore' command"
 
             # build the new images
